@@ -2,6 +2,7 @@ package org.progetti.accessdeskapi.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -26,17 +27,27 @@ public class Request {
     @Column(nullable = false, length = 80)
     private String softwareName;
 
-
+    @NotBlank
+    @Size(min = 10, max = 500)
+    @Column(length = 500, nullable = false)
     private String reason;
 
+    @NotNull
+    @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private Urgency urgency;
 
+    @NotNull
+    @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private StatusRequest status;
 
-    private User requestedBy;
+    @NotNull
+    @Column(nullable = false)
+    private String requestedBy;
 
+    @NotNull
+    @Column(nullable = false)
     private Instant createdAt;
 
     private String decidedAt;
