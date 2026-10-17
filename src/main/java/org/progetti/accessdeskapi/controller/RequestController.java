@@ -19,7 +19,7 @@ public class RequestController {
     //GET
     /*
     @GetMapping("/mine")
-    @PreAuthorize("hasAuthorities('ROLE_EMPLOYEE')")
+    @PreAuthorize("hasAuthority('ROLE_EMPLOYEE')")
     public ResponseEntity<?> findAll(
             Authentication authentication
     ) {
