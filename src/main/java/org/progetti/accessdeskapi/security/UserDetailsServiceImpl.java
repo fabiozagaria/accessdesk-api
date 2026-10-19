@@ -1,9 +1,7 @@
 package org.progetti.accessdeskapi.security;
 
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.Nullable;
-import org.progetti.accessdeskapi.models.User;
-import org.progetti.accessdeskapi.repository.RequestRepository;
+import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.UserRepository;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,7 +10,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
 import java.util.List;
 
 @Service

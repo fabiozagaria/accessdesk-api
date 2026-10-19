@@ -1,11 +1,11 @@
-package org.progetti.accessdeskapi.models;
+package org.progetti.accessdeskapi.models.user;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.springframework.security.core.GrantedAuthority;
+import org.progetti.accessdeskapi.models.request.Request;
 
 import java.util.List;
 import java.util.Set;
@@ -40,4 +40,10 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Transient
+    private Set<Authorities> authorities;
+
+    @Transient
+    @OneToMany(mappedBy = "requestedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Request> requestList;
 }

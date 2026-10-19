@@ -1,6 +1,6 @@
 package org.progetti.accessdeskapi.repository;
 
-import org.progetti.accessdeskapi.models.User;
+import org.progetti.accessdeskapi.models.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -1,4 +1,4 @@
-package org.progetti.accessdeskapi.models;
+package org.progetti.accessdeskapi.models.user;
 
 public enum Authorities {
     READ_REQUEST,

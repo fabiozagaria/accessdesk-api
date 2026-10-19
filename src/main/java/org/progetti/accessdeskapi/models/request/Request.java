@@ -1,10 +1,11 @@
-package org.progetti.accessdeskapi.models;
+package org.progetti.accessdeskapi.models.request;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.progetti.accessdeskapi.models.user.User;
 
 import java.time.Instant;
 
@@ -44,7 +45,9 @@ public class Request {
 
     @NotNull
     @Column(nullable = false)
-    private String requestedBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false, name = "user_id")
+    private User requestedBy;
 
     @NotNull
     @Column(nullable = false)

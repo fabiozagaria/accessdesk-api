@@ -1,9 +1,10 @@
-package org.progetti.accessdeskapi.mapper;
+package org.progetti.accessdeskapi.mapper.user;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.progetti.accessdeskapi.dtos.CreateRequestUser;
-import org.progetti.accessdeskapi.models.User;
+import org.progetti.accessdeskapi.dtos.register.CreateRequestUser;
+import org.progetti.accessdeskapi.dtos.register.RegisterResponse;
+import org.progetti.accessdeskapi.models.user.User;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
@@ -14,5 +15,5 @@ public interface UserMapper {
     User toEntity(CreateRequestUser dto);
 
 
-    CreateRequestUser toDTO(User entity);
+    RegisterResponse toDTO(User entity);
 }

@@ -1,4 +1,4 @@
-package org.progetti.accessdeskapi.models;
+package org.progetti.accessdeskapi.models.user;
 
 import java.util.Set;
 

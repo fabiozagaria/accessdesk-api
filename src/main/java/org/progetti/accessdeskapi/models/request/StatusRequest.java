@@ -1,4 +1,4 @@
-package org.progetti.accessdeskapi.models;
+package org.progetti.accessdeskapi.models.request;
 
 public enum StatusRequest {
     PENDING,
