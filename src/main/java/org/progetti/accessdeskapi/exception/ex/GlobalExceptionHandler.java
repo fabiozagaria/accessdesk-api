@@ -1,6 +1,8 @@
-package org.progetti.accessdeskapi.exception.error;
+package org.progetti.accessdeskapi.exception.ex;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.progetti.accessdeskapi.exception.error.APIError;
+import org.progetti.accessdeskapi.exception.error.ErrorName;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

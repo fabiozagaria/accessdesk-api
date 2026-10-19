@@ -1,7 +1,6 @@
 package org.progetti.accessdeskapi.security;
 
 import lombok.RequiredArgsConstructor;
-import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.UserRepository;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,11 +19,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        User user = userRepository.findByName(username)
+        var user = userRepository.findByUsername(username)
                 .orElseThrow( ()-> new UsernameNotFoundException("Not found"));
 
         List<GrantedAuthority> grantedAuthorities =
-                user.getRole()
+                user
+                        .getRole()
+                        .getPermissions()
                         .stream()
                         .map( authorities -> (GrantedAuthority)
                                 new SimpleGrantedAuthority(authorities.name())

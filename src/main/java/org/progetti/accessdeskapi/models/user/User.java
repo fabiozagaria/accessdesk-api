@@ -28,7 +28,7 @@ public class User {
     @NotBlank
     @Size(min = 10, max = 30)
     @Column(nullable = false, unique = true)
-    private String name;
+    private String username;
 
     @NotBlank
     @Size(min = 8)
@@ -43,7 +43,6 @@ public class User {
     @Transient
     private Set<Authorities> authorities;
 
-    @Transient
-    @OneToMany(mappedBy = "requestedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "requestedBy")
     private List<Request> requestList;
 }

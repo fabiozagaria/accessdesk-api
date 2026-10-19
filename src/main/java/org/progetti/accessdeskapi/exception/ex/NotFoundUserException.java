@@ -1,4 +1,4 @@
-package org.progetti.accessdeskapi.exception.error;
+package org.progetti.accessdeskapi.exception.ex;
 
 public class NotFoundUserException extends RuntimeException {
     public NotFoundUserException(String message) {

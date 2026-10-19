@@ -44,7 +44,6 @@ public class Request {
     private StatusRequest status;
 
     @NotNull
-    @Column(nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "user_id")
     private User requestedBy;

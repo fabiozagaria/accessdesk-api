@@ -1,7 +1,10 @@
 package org.progetti.accessdeskapi.models.user;
 
+import lombok.Getter;
+
 import java.util.Set;
 
+@Getter
 public enum Role {
     EMPLOYEE(Set.of(
          Authorities.READ_REQUEST,

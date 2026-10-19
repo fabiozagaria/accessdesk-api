@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface RequestRepository extends JpaRepository<Request, Long> {
 
     List<Request> findAllByRequestedBy(User user);
+    Optional<Request> findByIdAndRequestedBy(Long id, User user);
 }
