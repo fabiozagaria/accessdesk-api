@@ -27,7 +27,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow( ()-> new UsernameNotFoundException("Not found"));
 
         List<GrantedAuthority> grantedAuthorities =
-                user.getAuthorities()
+                user.getRole()
                         .stream()
                         .map( authorities -> (GrantedAuthority)
                                 new SimpleGrantedAuthority(authorities.name())

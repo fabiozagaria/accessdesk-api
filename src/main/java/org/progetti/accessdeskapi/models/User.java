@@ -40,7 +40,4 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @NotNull
-    @Column(nullable = false)
-    private Set<Authorities> authorities;
 }
