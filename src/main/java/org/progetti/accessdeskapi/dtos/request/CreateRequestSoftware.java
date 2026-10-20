@@ -19,14 +19,7 @@ public record CreateRequestSoftware(
         String reason,
 
         @NotNull
-        Urgency urgency,
-
-        @NotNull
-        StatusRequest status,
-
-        @NotBlank
-        @Size(min = 20, max = 50)
-        String nameUser
+        Urgency urgency
 
 ) {
 }

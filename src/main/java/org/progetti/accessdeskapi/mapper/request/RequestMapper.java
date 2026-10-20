@@ -14,6 +14,7 @@ public interface RequestMapper {
     @Mapping(target = "decidedAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "requestedBy", ignore = true)
+    @Mapping(target = "status", ignore = true)
     Request toEntity(CreateRequestSoftware dto);
 
 }

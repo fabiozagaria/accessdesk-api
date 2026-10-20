@@ -21,7 +21,7 @@ public class AuthController {
     private final AuthService authService;
 
 
-    @PostMapping("auth/register")
+    @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
             @Valid @RequestBody CreateRequestUser requestUser,
             HttpServletRequest request

@@ -40,9 +40,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @Transient
-    private Set<Authorities> authorities;
-
     @OneToMany(mappedBy = "requestedBy")
     private List<Request> requestList;
 }

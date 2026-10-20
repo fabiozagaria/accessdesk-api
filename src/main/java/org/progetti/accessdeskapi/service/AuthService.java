@@ -22,18 +22,10 @@ public class AuthService {
 
     public RegisterResponse register(CreateRequestUser requestUser) {
         String username = requestUser.username();
-        String password = requestUser.password();
-
-        String pswHash = passwordEncoder.encode(password);
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        username,
-                        pswHash
-                )
-        );
+        String pswHash = passwordEncoder.encode(requestUser.password());
 
         User user = userMapper.toEntity(requestUser);
+        user.setUsername(username);
         user.setPasswordHash(pswHash);
         user.setRole(Role.EMPLOYEE);
 

@@ -54,4 +54,8 @@ public class Request {
 
     private String decidedAt;
 
+    @Version
+    @Column(nullable = false)
+    private Integer version;
+
 }

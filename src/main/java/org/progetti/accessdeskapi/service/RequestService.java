@@ -1,5 +1,6 @@
 package org.progetti.accessdeskapi.service;
 
+import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.progetti.accessdeskapi.dtos.request.CreateRequestSoftware;
@@ -7,6 +8,7 @@ import org.progetti.accessdeskapi.dtos.request.RequestResponse;
 import org.progetti.accessdeskapi.exception.ex.NotFoundRequestException;
 import org.progetti.accessdeskapi.exception.ex.NotFoundUserException;
 import org.progetti.accessdeskapi.mapper.request.RequestMapper;
+import org.progetti.accessdeskapi.models.request.StatusRequest;
 import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.RequestRepository;
 import org.springframework.security.core.Authentication;
@@ -23,6 +25,7 @@ public class RequestService {
     private final RequestRepository requestRepository;
     private final UserService userService;
     private final RequestMapper requestMapper;
+    private final EntityManager entityManager;
 
     public List<RequestResponse> findAllByUsername(Authentication authentication) {
         String username = authentication.getName();
@@ -57,9 +60,12 @@ public class RequestService {
     ) {
         var user = findUser(authentication);
         var request = requestMapper.toEntity(requestSoftware);
+        entityManager.persist(request);
         request.setRequestedBy(user);
         request.setCreatedAt(Instant.now());
         request.setDecidedAt(null);
+        request.setStatus(StatusRequest.PENDING);
+        request.setVersion(0);
     }
 
     private User findUser(Authentication authentication) {
