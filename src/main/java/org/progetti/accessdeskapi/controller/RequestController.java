@@ -85,6 +85,8 @@ public class RequestController {
             @Valid @RequestBody DecisionRequest request
     ) {
         requestService.decideRequest(request, id);
+
+return ResponseEntity.status(HttpStatus.OK).build();
     }
 
 
