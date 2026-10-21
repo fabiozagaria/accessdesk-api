@@ -4,6 +4,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.progetti.accessdeskapi.dtos.request.CreateRequestSoftware;
+import org.progetti.accessdeskapi.dtos.request.Decision;
+import org.progetti.accessdeskapi.dtos.request.DecisionRequest;
 import org.progetti.accessdeskapi.dtos.request.RequestResponse;
 import org.progetti.accessdeskapi.exception.ex.NotFoundRequestException;
 import org.progetti.accessdeskapi.exception.ex.NotFoundUserException;
@@ -11,13 +13,14 @@ import org.progetti.accessdeskapi.mapper.request.RequestMapper;
 import org.progetti.accessdeskapi.models.request.StatusRequest;
 import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.RequestRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,17 +30,11 @@ public class RequestService {
     private final RequestMapper requestMapper;
     private final EntityManager entityManager;
 
-    public List<RequestResponse> findAllByUsername(Authentication authentication) {
-        String username = authentication.getName();
-        var user = userService.findByUsername(username)
-                .orElseThrow(()-> new NotFoundUserException(String.format(
-                        "%s non trovato", username
-                )));
-        var requests = requestRepository.findAllByRequestedBy(user);
-        return requests
-                .stream()
-                .map(requestMapper::toDTO)
-                .toList();
+    public Page<RequestResponse> findAllByUsername(Authentication authentication,
+                                                   Pageable pageable) {
+        var user = findUser(authentication);
+        var requests = requestRepository.findAllByRequestedBy(user, pageable);
+        return requests.map(requestMapper::toDTO);
 
     }
 
@@ -60,12 +57,33 @@ public class RequestService {
     ) {
         var user = findUser(authentication);
         var request = requestMapper.toEntity(requestSoftware);
-        entityManager.persist(request);
         request.setRequestedBy(user);
         request.setCreatedAt(Instant.now());
         request.setDecidedAt(null);
         request.setStatus(StatusRequest.PENDING);
-        request.setVersion(0);
+
+        entityManager.persist(request);
+
+    }
+
+
+    public Page<RequestResponse> findAll(Pageable pageable) {
+        var requestsEntities = requestRepository.findAll(pageable);
+        return requestsEntities.map(requestMapper::toDTO);
+    }
+
+
+    public void decideRequest(DecisionRequest decision, Long id) {
+        var request = requestRepository.findById(id)
+                .orElseThrow( ()-> new NotFoundRequestException(
+                        String.format(
+                                "%s non trovato", id
+                        )
+                ));
+        if(!request.getStatus().equals(StatusRequest.PENDING)) {
+
+        }
+
     }
 
     private User findUser(Authentication authentication) {

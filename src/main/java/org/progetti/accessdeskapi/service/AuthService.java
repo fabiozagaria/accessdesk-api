@@ -1,7 +1,8 @@
 package org.progetti.accessdeskapi.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.progetti.accessdeskapi.dtos.register.CreateRequestUser;
+import org.progetti.accessdeskapi.dtos.register.AccessUser;
 import org.progetti.accessdeskapi.dtos.register.RegisterResponse;
 import org.progetti.accessdeskapi.mapper.user.UserMapper;
 import org.progetti.accessdeskapi.models.user.Role;
@@ -20,7 +21,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final UserRepository userRepository;
 
-    public RegisterResponse register(CreateRequestUser requestUser) {
+    public RegisterResponse register(@Valid AccessUser requestUser) {
         String username = requestUser.username();
         String pswHash = passwordEncoder.encode(requestUser.password());
 
@@ -33,6 +34,17 @@ public class AuthService {
         return userMapper.toDTO(user);
     }
 
+    public void login(@Valid AccessUser accessUser) {
+        authenticationManager.authenticate(
+                UsernamePasswordAuthenticationToken.unauthenticated(
+                        accessUser.username(),
+                        accessUser.password()
+                )
+        );
+
+
+    }
+
 
     private void convertRole(User user) {
         if(user.getRole().name().equals(String.valueOf(Role.EMPLOYEE))) {
@@ -41,4 +53,6 @@ public class AuthService {
             user.setRole(Role.EMPLOYEE);
         }
     }
+
+
 }
