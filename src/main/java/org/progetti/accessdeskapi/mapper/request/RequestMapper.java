@@ -13,7 +13,7 @@ public interface RequestMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "decidedAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "requestedBy", ignore = true)
+    @Mapping(target = "username", source = "requestedBy.username", ignore = true)
     @Mapping(target = "status", ignore = true)
     Request toEntity(CreateRequestSoftware dto);
 
