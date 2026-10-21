@@ -72,7 +72,8 @@ public class RequestService {
         return requestsEntities.map(requestMapper::toDTO);
     }
 
-
+@PreAuthorize("hasAuthority('ROLE_MANAGER')")
+@Transactional
     public void decideRequest(DecisionRequest decision, Long id) {
         var request = requestRepository.findById(id)
                 .orElseThrow( ()-> new NotFoundRequestException(
@@ -80,9 +81,12 @@ public class RequestService {
                                 "%s non trovato", id
                         )
                 ));
-        if(!request.getStatus().equals(StatusRequest.PENDING)) {
-
+        if(request.getStatus() != StatusRequest.PENDING) {
+           
+             throw new RequestAlreadyDecidedException("Richiesta gia gestita");
         }
+request.setStatus(decision.name()):
+request.setDecidedAt(Instant.now();
 
     }
 
