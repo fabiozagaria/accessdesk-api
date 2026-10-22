@@ -85,8 +85,8 @@ public class RequestService {
            
              throw new RequestAlreadyDecidedException("Richiesta gia gestita");
         }
-request.setStatus(decision.name()):
-request.setDecidedAt(Instant.now();
+request.setStatus(decision.decision().name());
+request.setDecidedAt(Instant.now());
 
     }
 
