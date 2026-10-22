@@ -11,8 +11,11 @@ import java.time.Instant;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final Instant now = Instant.now();
+
     @ExceptionHandler(NotFoundUserException.class)
-    public ResponseEntity<APIError> handle(
+    public ResponseEntity<APIError> handleNotFoundUser(
             NotFoundUserException exception,
             HttpServletRequest request
     )
@@ -22,12 +25,31 @@ public class GlobalExceptionHandler {
                 err,
                 exception.getMessage(),
                 request.getRequestURI(),
-                Instant.now(),
+                now,
                 err.getStatus()
         );
         return ResponseEntity
                 .status(err.getStatus())
                 .body(apiError);
+    }
+
+    @ExceptionHandler(RequestAlreadyDecidedException.class)
+    public ResponseEntity<APIError> handleRequestAlreadyDecided(
+            RequestAlreadyDecidedException exception,
+            HttpServletRequest request
+    )
+    {
+        var err = ErrorName.REQUEST_ALREADY_DECIDED;
+        var status = err.getStatus();
+        var apiError = new APIError(
+                err,
+                exception.getMessage(),
+                request.getRequestURI(),
+                now,
+                status
+        );
+
+        return ResponseEntity.status(status).body(apiError);
     }
 
 }

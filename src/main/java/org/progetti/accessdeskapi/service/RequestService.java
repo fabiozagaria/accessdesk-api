@@ -9,6 +9,7 @@ import org.progetti.accessdeskapi.dtos.request.DecisionRequest;
 import org.progetti.accessdeskapi.dtos.request.RequestResponse;
 import org.progetti.accessdeskapi.exception.ex.NotFoundRequestException;
 import org.progetti.accessdeskapi.exception.ex.NotFoundUserException;
+import org.progetti.accessdeskapi.exception.ex.RequestAlreadyDecidedException;
 import org.progetti.accessdeskapi.mapper.request.RequestMapper;
 import org.progetti.accessdeskapi.models.request.StatusRequest;
 import org.progetti.accessdeskapi.models.user.User;
@@ -85,10 +86,10 @@ public class RequestService {
            
              throw new RequestAlreadyDecidedException("Richiesta gia gestita");
         }
-request.setStatus(
-    StatusRequest.valueOf(decision.decision().name())
-);
-request.setDecidedAt(Instant.now());
+             request.setStatus(
+                     StatusRequest.valueOf(decision.decision().name())
+            );
+           request.setDecidedAt(Instant.now());
 
     }
 

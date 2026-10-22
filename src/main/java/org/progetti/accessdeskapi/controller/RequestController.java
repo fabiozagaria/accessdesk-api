@@ -86,7 +86,7 @@ public class RequestController {
     ) {
         requestService.decideRequest(request, id);
 
-return ResponseEntity.status(HttpStatus.OK).build();
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
 

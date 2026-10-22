@@ -52,7 +52,8 @@ public class Request {
     @Column(nullable = false)
     private Instant createdAt;
 
-    private String decidedAt;
+    @Column(nullable = true)
+    private Instant decidedAt;
 
     @Version
     @Column(nullable = false)

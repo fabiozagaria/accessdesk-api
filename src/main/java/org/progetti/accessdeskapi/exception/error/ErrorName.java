@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 public enum ErrorName {
 
     REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND),
+    REQUEST_ALREADY_DECIDED(HttpStatus.CONFLICT),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND);
+
 
     private final HttpStatus status;
 
