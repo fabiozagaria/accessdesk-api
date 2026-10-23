@@ -73,14 +73,14 @@ SET role = 'MANAGER'
 WHERE username = '<username_manager_di_test>';
 ```
 
-Gli endpoint /auth/register e /auth/login sono permitAll, ma nella configurazione remota attuale non sono esclusi dal filtro CSRF. Il loro uso da un client senza token CSRF resta da sistemare o documentare e verificare; permitAll non disabilita CSRF. Gli endpoint /api/** sono esclusi dal controllo CSRF.
+Gli endpoint /auth/register e /auth/login sono permitAll. La configurazione corrente disabilita CSRF globalmente; la creazione degli account da un ambiente pulito resta da verificare.
 
 ## Endpoint implementati
 
 | Metodo | Percorso | Accesso | Successo |
 | --- | --- | --- | --- |
-| POST | /auth/register | pubblico, con vincolo CSRF sopra indicato | 201 |
-| POST | /auth/login | pubblico, con vincolo CSRF sopra indicato | 200, body vuoto |
+| POST | /auth/register | pubblico | 201 |
+| POST | /auth/login | pubblico | 200, body vuoto |
 | POST | /api/requests | EMPLOYEE | 204, body vuoto |
 | GET | /api/requests/mine | EMPLOYEE | 200, pagina delle proprie richieste |
 | GET | /api/requests/{id} | EMPLOYEE proprietario | 200 |
@@ -146,7 +146,7 @@ Risultati confermati dallo sviluppatore durante le prove Postman; non sono una s
 
 La risposta di errore locale verificata contiene errorName, msg, path, timestamp e status.
 
-### Correzioni locali da sincronizzare
+### Correzioni sincronizzate su GitHub
 
 Durante il collaudo sono state applicate e verificate in locale:
 
@@ -154,16 +154,16 @@ Durante il collaudo sono state applicate e verificate in locale:
 - EntityGraph su findAllByRequestedBy, findByIdAndRequestedBy e findAll(Pageable);
 - handler di NotFoundRequestException con risposta 404.
 
-**Alla lettura di main effettuata per questo aggiornamento, queste correzioni non erano ancora presenti nei sorgenti remoti.** Questo commit aggiorna soltanto il README: prima di dichiarare la consegna occorre fare commit/push del codice locale e verificare il checkout risultante.
+Le tre correzioni sono ora presenti su main e sono state verificate tramite lettura dei sorgenti remoti dopo il push del 23 ottobre 2026. Questa verifica non equivale a eseguire build o test sul checkout remoto.
 
 ## Cosa manca per chiudere la consegna
 
-- [ ] Sincronizzare le correzioni locali sopra elencate.
+- [x] Sincronizzare le correzioni locali sopra elencate.
 - [ ] Eseguire almeno due test automatici significativi: un flusso corretto e un caso di errore/permesso, come richiesto dalla consegna. Il test remoto ispezionato è soltanto contextLoads.
 - [ ] Completare i casi originali non ancora verificati esplicitamente: nome assente, urgenza sconosciuta, /mine del secondo employee, ID realmente inesistente e pagina senza risultati.
 - [ ] Registrare una prova esplicita di persistenza dopo riavvio.
 - [ ] Verificare paginazione su pagine diverse e ordinamento con richieste STANDARD/URGENT e date diverse; la prova proposta non è stata eseguita in questa sessione.
-- [ ] Verificare il percorso di creazione degli account da un ambiente pulito, inclusa la configurazione CSRF di /auth/**.
+- [ ] Verificare il percorso di creazione degli account da un ambiente pulito.
 - [ ] Riconciliare contratto e checklist con creazione 204/201, risposta 404/403 e formato delle liste paginate.
 - [ ] Correggere il timestamp degli errori: nel codice remoto Instant.now() è memorizzato in un campo del bean, anziché calcolato per ogni errore.
 - [ ] Completare checklist e resoconto finale dei documenti 04 e 05.
