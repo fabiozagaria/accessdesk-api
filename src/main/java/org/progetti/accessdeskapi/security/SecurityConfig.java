@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                         .httpBasic(Customizer.withDefaults())
-                        .csrf(csfr -> csfr.ignoringRequestMatchers("/api/**"))
+                        .csrf(csfr -> csfr.disable())
                 .build();
     }
 

@@ -16,6 +16,7 @@ import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.RequestRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class RequestService {
     private final UserService userService;
     private final RequestMapper requestMapper;
     private final EntityManager entityManager;
+
 
     public Page<RequestResponse> findAllByUsername(Authentication authentication,
                                                    Pageable pageable) {

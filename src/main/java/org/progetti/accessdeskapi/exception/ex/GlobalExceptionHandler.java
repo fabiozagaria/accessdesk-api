@@ -1,8 +1,11 @@
 package org.progetti.accessdeskapi.exception.ex;
 
+import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotNull;
 import org.progetti.accessdeskapi.exception.error.APIError;
 import org.progetti.accessdeskapi.exception.error.ErrorName;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,16 +24,25 @@ public class GlobalExceptionHandler {
     )
     {
         ErrorName err = ErrorName.USER_NOT_FOUND;
-        var apiError = new APIError(
-                err,
-                exception.getMessage(),
-                request.getRequestURI(),
-                now,
-                err.getStatus()
-        );
+        var status = err.getStatus();
+
         return ResponseEntity
-                .status(err.getStatus())
-                .body(apiError);
+                .status(status)
+                .body(istanceObjectError(status, err, exception, request));
+    }
+
+    @ExceptionHandler(NotFoundRequestException.class)
+    public ResponseEntity<APIError> handleNotFoundRequest(
+            NotFoundRequestException exception,
+            HttpServletRequest request
+    )
+    {
+        var err = ErrorName.REQUEST_NOT_FOUND;
+        var status = err.getStatus();
+
+        return ResponseEntity
+                .status(status)
+                .body(istanceObjectError(status, err, exception, request));
     }
 
     @ExceptionHandler(RequestAlreadyDecidedException.class)
@@ -41,15 +53,37 @@ public class GlobalExceptionHandler {
     {
         var err = ErrorName.REQUEST_ALREADY_DECIDED;
         var status = err.getStatus();
-        var apiError = new APIError(
+
+        return ResponseEntity.status(status).body(istanceObjectError(status, err, exception, request));
+    }
+
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<APIError> handleUserAlreadyExists(
+            UserAlreadyExistsException exception,
+            HttpServletRequest request
+
+    ) {
+        var err = ErrorName.USER_ALREADY_EXISTS;
+        var status = err.getStatus();
+        return ResponseEntity
+                .status(status)
+                .body(istanceObjectError(status, err, exception, request));
+
+    }
+
+    private APIError istanceObjectError(
+            HttpStatus status,
+            ErrorName err,
+            RuntimeException exception,
+            HttpServletRequest request
+    ) {
+        return new APIError(
                 err,
                 exception.getMessage(),
                 request.getRequestURI(),
                 now,
                 status
         );
-
-        return ResponseEntity.status(status).body(apiError);
     }
 
 }

@@ -8,6 +8,7 @@ import org.progetti.accessdeskapi.models.request.Request;
 
 @Mapper(componentModel = "spring")
 public interface RequestMapper {
+    @Mapping(target = "username", source = "requestedBy.username")
     RequestResponse toDTO(Request entity);
 
     @Mapping(target = "id", ignore = true)
