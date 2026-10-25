@@ -11,6 +11,7 @@ import org.progetti.accessdeskapi.mapper.user.UserMapper;
 import org.progetti.accessdeskapi.models.user.Role;
 import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.UserRepository;
+import org.progetti.accessdeskapi.security.JwtService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserRepository userRepository;
+    private final JwtService jwtService;
 
     @Transactional
     public RegisterResponse register(@Valid AccessUser requestUser) {
@@ -53,13 +55,15 @@ public class AuthService {
         return userMapper.toDTO(user);
     }
 
-    public void login(@Valid AccessUser accessUser) {
-        authenticationManager.authenticate(
+    public String login(@Valid AccessUser accessUser) {
+        var auth = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(
                         accessUser.username(),
                         accessUser.password()
                 )
         );
+        return jwtService.generateAccessToken(auth);
+
 
 
     }

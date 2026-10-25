@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.progetti.accessdeskapi.dtos.register.AccessUser;
+import org.progetti.accessdeskapi.dtos.register.LoginResponse;
 import org.progetti.accessdeskapi.dtos.register.RegisterResponse;
 import org.progetti.accessdeskapi.service.AuthService;
 import org.springframework.http.HttpStatus;
@@ -35,10 +36,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(
+    public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody AccessUser request
     ) {
-        authService.login(request);
-        return ResponseEntity.status(HttpStatus.OK).build();
+        var login = authService.login(request);
+        return ResponseEntity.status(HttpStatus.OK).body(new LoginResponse(login));
     }
 }
