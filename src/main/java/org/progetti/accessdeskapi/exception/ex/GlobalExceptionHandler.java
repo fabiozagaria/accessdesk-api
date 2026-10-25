@@ -7,6 +7,7 @@ import org.progetti.accessdeskapi.exception.error.APIError;
 import org.progetti.accessdeskapi.exception.error.ErrorName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -69,6 +70,24 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(istanceObjectError(status, err, exception, request));
 
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<APIError> handleJwt(
+            JwtException exception,
+            HttpServletRequest request
+    ) {
+        ErrorName err = ErrorName.TOKEN_ERROR;
+        var status = err.getStatus();
+        return ResponseEntity
+                .status(status)
+                .body(istanceObjectError(
+                        status,
+                        err,
+                        exception,
+                        request
+
+                ));
     }
 
     private APIError istanceObjectError(
