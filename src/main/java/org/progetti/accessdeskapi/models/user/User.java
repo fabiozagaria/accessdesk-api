@@ -11,7 +11,13 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_users_username",
+                columnNames = "username"
+        )
+)
 
 @Builder
 @Getter
@@ -27,7 +33,7 @@ public class User {
 
     @NotBlank
     @Size(min = 10, max = 30)
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String username;
 
     @NotBlank

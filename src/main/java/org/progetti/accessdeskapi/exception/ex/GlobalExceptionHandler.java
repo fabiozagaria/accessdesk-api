@@ -16,8 +16,6 @@ import java.time.Instant;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final Instant now = Instant.now();
-
     @ExceptionHandler(NotFoundUserException.class)
     public ResponseEntity<APIError> handleNotFoundUser(
             NotFoundUserException exception,
@@ -96,6 +94,7 @@ public class GlobalExceptionHandler {
             RuntimeException exception,
             HttpServletRequest request
     ) {
+        Instant now = Instant.now();
         return new APIError(
                 err,
                 exception.getMessage(),

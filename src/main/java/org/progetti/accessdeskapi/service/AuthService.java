@@ -2,16 +2,22 @@ package org.progetti.accessdeskapi.service;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.dialect.lock.OptimisticEntityLockException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.progetti.accessdeskapi.dtos.register.AccessUser;
 import org.progetti.accessdeskapi.dtos.register.RegisterResponse;
+import org.progetti.accessdeskapi.exception.ex.UserAlreadyExistsException;
 import org.progetti.accessdeskapi.mapper.user.UserMapper;
 import org.progetti.accessdeskapi.models.user.Role;
 import org.progetti.accessdeskapi.models.user.User;
 import org.progetti.accessdeskapi.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +27,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final UserRepository userRepository;
 
+    @Transactional
     public RegisterResponse register(@Valid AccessUser requestUser) {
         String username = requestUser.username();
         String pswHash = passwordEncoder.encode(requestUser.password());
@@ -30,7 +37,19 @@ public class AuthService {
         user.setPasswordHash(pswHash);
         user.setRole(Role.EMPLOYEE);
 
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            Throwable cause = e;
+            while (cause != null) {
+                if (cause instanceof ConstraintViolationException violation
+                        && "uk_users_username".equals(violation.getConstraintName())) {
+                    throw new UserAlreadyExistsException("Username occupato");
+                }
+                cause = cause.getCause();
+            }
+            throw e;
+        }
         return userMapper.toDTO(user);
     }
 
