@@ -20,11 +20,11 @@ Consegna backend locale, senza frontend. L'implementazione include utenti persis
 5. [Modalità di consegna](src/main/docs/05-consegna.md)
 6. [Registro delle decisioni](src/main/docs/06-decision-log.md)
 
-I documenti originali restano consultabili. Le differenze rispetto al comportamento corrente sono indicate sotto; le checklist originali non sono state aggiornate con questo intervento.
+I documenti originali restano consultabili; il requisito MySQL originale è superato dalla scelta PostgreSQL predefinito descritta in questo README. Le differenze rispetto al comportamento corrente sono indicate sotto; le checklist originali non sono state aggiornate con questo intervento.
 
 ## Stack e scelte tecniche
 
-- Java 21, Spring Boot, Spring Web, Spring Data JPA / Hibernate, MySQL.
+- Java 21, Spring Boot, Spring Web, Spring Data JPA / Hibernate, PostgreSQL predefinito e MySQL alternativo.
 - Spring Security: HTTP Basic, session policy stateless, BCrypt, autorizzazioni con method security.
 - Entità User e Request, relazione many-to-one requestedBy con fetch LAZY.
 - DTO record e mapping MapStruct.
@@ -35,15 +35,28 @@ I documenti originali restano consultabili. Le differenze rispetto al comportame
 
 ## Requisiti e avvio locale
 
-Servono JDK 21 e un server MySQL raggiungibile. Creare un database dedicato, ad esempio accessdesk, e configurare queste variabili nell'ambiente o nella Run Configuration dell'IDE:
+Servono JDK 21 e un server PostgreSQL raggiungibile. Senza un profilo attivo esplicito, `spring.profiles.default=postgres` carica `application-postgres.properties`. Le impostazioni JPA e di sicurezza comuni restano in `application.properties`.
+
+Predisporre il database `accessdesk_pg`, con utente `dev` autorizzato a creare e aggiornare le tabelle, e configurare nell'ambiente o nella Run Configuration dell'IDE:
 
 | Variabile | Valore |
 | --- | --- |
-| SPRING_DATASOURCE_URL | jdbc:mysql://localhost:3306/accessdesk |
-| SPRING_DATASOURCE_USERNAME | utente MySQL locale |
-| SPRING_DATASOURCE_PASSWORD | password MySQL locale |
+| PG_PASSWORD | password dell'utente PostgreSQL `dev` |
+| SECRET_KEY | chiave JWT codificata in Base64, generata da almeno 32 byte casuali |
 
-Le variabili Spring sovrascrivono la configurazione del datasource. Non inserire credenziali personali nel repository. In sviluppo il file properties configura ddl-auto=update, open-in-view=false e log SQL: predisporre il database; Hibernate aggiorna le tabelle.
+La connessione predefinita è `jdbc:postgresql://localhost:5432/accessdesk_pg`. `SECRET_KEY` serve anche con HTTP Basic, perché i bean JWT vengono creati all'avvio. Non inserire credenziali personali nel repository.
+
+In sviluppo `ddl-auto=update` permette a Hibernate di creare/aggiornare le tabelle in un database già esistente; non crea il database e non trasferisce i dati da MySQL. `open-in-view=false` e log SQL restano invariati. Questo passaggio prevede nuovi account e nuove richieste su PostgreSQL: i dati MySQL restano nel database originale. Non sono introdotte migrazioni versionate Flyway/Liquibase.
+
+### Profilo MySQL alternativo
+
+Per usare MySQL impostare `SPRING_PROFILES_ACTIVE=mysql` e `DB_PASSWORD`; la connessione di `application-mysql.properties` è `jdbc:mysql://localhost:3306/accessdesk`, con utente `root`. Predisporre il database `accessdesk` e mantenere anche `SECRET_KEY`. Il driver MySQL resta disponibile nel progetto.
+
+`spring.profiles.default` viene usato soltanto in assenza di profili attivi espliciti: un profilo `mysql` già selezionato nell'IDE continua a selezionare MySQL. Rimuovere quella selezione per usare il database predefinito, oppure impostare esplicitamente `postgres`.
+
+Le variabili `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD` sovrascrivono le proprietà dei profili. Controllare ed eliminare eventuali vecchi override MySQL dalla Run Configuration prima di passare a PostgreSQL.
+
+### Avvio
 
 Linux/macOS:
 
@@ -177,4 +190,10 @@ bash mvnw test
 bash mvnw clean package
 ```
 
-Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datasource disponibile e configurato. Questi comandi sono istruzioni: nessuna suite o build è stata eseguita dall'assistente durante l'aggiornamento del README.
+Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datasource disponibile e configurato. Tentativo di `bash mvnw test` del 25 ottobre 2026: bloccato prima della compilazione dalla risoluzione DNS di Maven Central; Maven segnala inoltre dichiarazioni duplicate preesistenti di `maven-compiler-plugin` nel POM. Nessun test eseguito. L'ambiente di revisione dispone di JDK 17 anziché del JDK 21 richiesto e non dispone di PostgreSQL: build e collaudo applicativo restano da eseguire in un ambiente adeguato.
+
+## Passaggio a PostgreSQL — 25 ottobre 2026
+
+Revisione di tutti i sorgenti Java: repository basate su Spring Data JPA, nessuna query SQL nativa o `columnDefinition` specifica MySQL. Mapping con IDENTITY, enum stringa, relazione users/requests, Instant e @Version mantenuti; nessun cambiamento Java necessario dalla revisione statica. Entrambi i driver JDBC erano già presenti.
+
+Dopo il cambio di profilo verificare sul proprio ambiente: avvio con PostgreSQL, registrazione e username duplicato (409), login, creazione/lettura delle richieste, permessi EMPLOYEE/MANAGER, decisione e seconda decisione (409), paginazione/ordinamento e persistenza dopo riavvio. Questi controlli non sono dichiarati superati dalla sola revisione statica. In particolare la sensibilità alle maiuscole dello username può differire dalla precedente collation MySQL: il codice non normalizza gli username.
