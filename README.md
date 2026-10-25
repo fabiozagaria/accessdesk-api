@@ -3,13 +3,13 @@
 **Ticket:** IT-2026-014  
 **Cliente simulato:** Northstar Services S.r.l.  
 **Sviluppatore:** Fabio Zagaria  
-**Stato al 23 ottobre 2026:** flussi principali verificati manualmente in locale; consegna finale ancora aperta.
+**Stato al 25 ottobre 2026:** progetto backend in sviluppo. PostgreSQL predefinito, login JWT e filtro Bearer implementati; flussi applicativi collaudati manualmente il 23 ottobre con HTTP Basic. Collaudo completo JWT/PostgreSQL e consegna finale ancora aperti.
 
 ## Obiettivo e ambito
 
 API REST interna: un dipendente crea richieste di accesso a software e consulta le proprie; un manager consulta tutte le richieste e approva o rifiuta quelle ancora in attesa.
 
-Consegna backend locale, senza frontend. L'implementazione include utenti persistiti, registrazione e paginazione come estensioni della consegna originale. JWT, refresh token, Docker e frontend non sono necessari per completare questo esercizio.
+Consegna backend locale, senza frontend. L'implementazione include utenti persistiti, registrazione e paginazione come estensioni della consegna originale. JWT è stato aggiunto come approfondimento autonomo; refresh token, Docker e frontend restano fuori dalla consegna corrente.
 
 ## Documenti della consegna
 
@@ -25,7 +25,9 @@ I documenti originali restano consultabili; il requisito MySQL originale è supe
 ## Stack e scelte tecniche
 
 - Java 21, Spring Boot, Spring Web, Spring Data JPA / Hibernate, PostgreSQL predefinito e MySQL alternativo.
-- Spring Security: HTTP Basic, session policy stateless, BCrypt, autorizzazioni con method security.
+- Spring Security: JWT Bearer HS256 con access token di 900 secondi (15 minuti), session policy stateless, BCrypt e autorizzazioni con method security. HTTP Basic resta abilitato come alternativa.
+- Filtro personalizzato `JwtAuthenticationFilter` (`OncePerRequestFilter`) prima di `UsernamePasswordAuthenticationFilter`: valida il token, ricarica utente e authorities dal database e popola il `SecurityContext`.
+- Errori JWT e utente non trovato nel filtro delegati a `HandlerExceptionResolver`, quindi al `GlobalExceptionHandler`: risposta `APIError` con stato 401. Non tutti gli errori Spring Security usano necessariamente questo formato.
 - Entità User e Request, relazione many-to-one requestedBy con fetch LAZY.
 - DTO record e mapping MapStruct.
 - Creazione e decisione transazionali; aggiornamento tramite dirty checking.
@@ -44,7 +46,7 @@ Predisporre il database `accessdesk_pg`, con utente `dev` autorizzato a creare e
 | PG_PASSWORD | password dell'utente PostgreSQL `dev` |
 | SECRET_KEY | chiave JWT codificata in Base64, generata da almeno 32 byte casuali |
 
-La connessione predefinita è `jdbc:postgresql://localhost:5432/accessdesk_pg`. `SECRET_KEY` serve anche con HTTP Basic, perché i bean JWT vengono creati all'avvio. Non inserire credenziali personali nel repository.
+La connessione predefinita è `jdbc:postgresql://localhost:5432/accessdesk_pg`. `SECRET_KEY` è obbligatoria all'avvio per creare encoder e decoder JWT, anche se si usa HTTP Basic. Non inserire credenziali personali nel repository.
 
 In sviluppo `ddl-auto=update` permette a Hibernate di creare/aggiornare le tabelle in un database già esistente; non crea il database e non trasferisce i dati da MySQL. `open-in-view=false` e log SQL restano invariati. Questo passaggio prevede nuovi account e nuove richieste su PostgreSQL: i dati MySQL restano nel database originale. Non sono introdotte migrazioni versionate Flyway/Liquibase.
 
@@ -74,7 +76,32 @@ Base URL predefinita: http://localhost:8080.
 
 ## Autenticazione e account di prova
 
-In Postman selezionare **Authorization → Basic Auth** e inserire username e password dell'account. Le credenziali vanno inviate a ogni richiesta: POST /auth/login non emette token e non è necessario prima di usare HTTP Basic.
+### Login e Bearer token
+
+Inviare `POST /auth/login` con **Authorization → No Auth**, `Content-Type: application/json` e le credenziali di un account registrato:
+
+```json
+{
+  "username": "employee_test",
+  "password": "<password_dell_account>"
+}
+```
+
+La risposta è `200 OK` con questo formato:
+
+```json
+{
+  "accessToken": "<jwt>"
+}
+```
+
+In Postman selezionare poi **Authorization → Bearer Token** e incollare il solo valore di `accessToken` per chiamare gli endpoint protetti. L'header risultante è `Authorization: Bearer <jwt>`.
+
+Il token contiene subject (username), issued-at e scadenza dopo 900 secondi; è firmato con HS256. Ruoli e permessi sono ricaricati dal database a ogni richiesta Bearer. Alla scadenza ripetere il login: non sono implementati refresh token, logout con revoca o blacklist.
+
+### HTTP Basic alternativo
+
+In Postman è ancora possibile scegliere **Authorization → Basic Auth** e inviare username e password a ogni richiesta, senza login preliminare. Le due modalità sono entrambe presenti nella configurazione attuale.
 
 La registrazione usa un body con username (10–30 caratteri) e password (almeno 8); assegna sempre EMPLOYEE. Non ci sono account dimostrativi preconfigurati né password condivise nel README.
 
@@ -93,7 +120,7 @@ Gli endpoint /auth/register e /auth/login sono permitAll. La configurazione corr
 | Metodo | Percorso | Accesso | Successo |
 | --- | --- | --- | --- |
 | POST | /auth/register | pubblico | 201 |
-| POST | /auth/login | pubblico | 200, body vuoto |
+| POST | /auth/login | pubblico | 200, JSON con accessToken |
 | POST | /api/requests | EMPLOYEE | 204, body vuoto |
 | GET | /api/requests/mine | EMPLOYEE | 200, pagina delle proprie richieste |
 | GET | /api/requests/{id} | EMPLOYEE proprietario | 200 |
@@ -104,7 +131,7 @@ Il dettaglio effettivo è /api/requests/{id}, non /api/requests/mine/{id}. La cr
 
 ### Creazione di una richiesta
 
-POST /api/requests, Basic Auth EMPLOYEE, Content-Type: application/json:
+POST /api/requests, Bearer token EMPLOYEE (oppure HTTP Basic), Content-Type: application/json:
 
 ```json
 {
@@ -128,7 +155,7 @@ L'ultimo endpoint richiede MANAGER. Le liste restituiscono una pagina con conten
 
 ### Decisione
 
-PATCH /api/requests/{id}/decision, Basic Auth MANAGER:
+PATCH /api/requests/{id}/decision, Bearer token MANAGER (oppure HTTP Basic):
 
 ```json
 {
@@ -140,7 +167,7 @@ Valori ammessi: APPROVED e REJECTED. La richiesta deve essere PENDING; la decisi
 
 ## Collaudo manuale locale — 23 ottobre 2026
 
-Risultati confermati dallo sviluppatore durante le prove Postman; non sono una suite automatica né certificano il checkout remoto.
+Risultati confermati dallo sviluppatore durante le prove Postman con HTTP Basic; non sono una suite automatica né certificano il checkout remoto o i successivi cambiamenti JWT/PostgreSQL.
 
 | Scenario | Esito confermato |
 | --- | --- |
@@ -178,7 +205,8 @@ Le tre correzioni sono ora presenti su main e sono state verificate tramite lett
 - [ ] Verificare paginazione su pagine diverse e ordinamento con richieste STANDARD/URGENT e date diverse; la prova proposta non è stata eseguita in questa sessione.
 - [ ] Verificare il percorso di creazione degli account da un ambiente pulito.
 - [ ] Riconciliare contratto e checklist con creazione 204/201, risposta 404/403 e formato delle liste paginate.
-- [ ] Correggere il timestamp degli errori: nel codice remoto Instant.now() è memorizzato in un campo del bean, anziché calcolato per ogni errore.
+- [x] Timestamp degli errori calcolato per ogni risposta con `Instant.now()` nel metodo che costruisce `APIError` (verifica del sorgente del 25 ottobre).
+- [ ] Collaudare login JWT e accesso Bearer su PostgreSQL: token valido, scaduto, alterato, utente non più presente, ruoli/permessi e assenza di token. Verificare anche la modalità HTTP Basic ancora attiva.
 - [ ] Completare checklist e resoconto finale dei documenti 04 e 05.
 
 Ulteriori verifiche di robustezza: input enum non valido nella decisione, credenziali errate, registrazione duplicata e decisioni simultanee. La presenza di @Version non dimostra da sola che il conflitto concorrente restituisca una risposta API gestita.
@@ -197,3 +225,7 @@ Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datas
 Revisione di tutti i sorgenti Java: repository basate su Spring Data JPA, nessuna query SQL nativa o `columnDefinition` specifica MySQL. Mapping con IDENTITY, enum stringa, relazione users/requests, Instant e @Version mantenuti; nessun cambiamento Java necessario dalla revisione statica. Entrambi i driver JDBC erano già presenti.
 
 Dopo il cambio di profilo verificare sul proprio ambiente: avvio con PostgreSQL, registrazione e username duplicato (409), login, creazione/lettura delle richieste, permessi EMPLOYEE/MANAGER, decisione e seconda decisione (409), paginazione/ordinamento e persistenza dopo riavvio. Questi controlli non sono dichiarati superati dalla sola revisione statica. In particolare la sensibilità alle maiuscole dello username può differire dalla precedente collation MySQL: il codice non normalizza gli username.
+
+## Allineamento della documentazione — 25 ottobre 2026
+
+README aggiornato tramite confronto con controller, servizi, configurazione Security, filtro JWT, DTO, handler degli errori e profili database del commit `6a1fbdb692b22ef1a16e6114304ab7585555f90a`. Aggiornamento documentale: nessuna modifica Java o database, nessun nuovo collaudo runtime. Le prove manuali del 23 ottobre rimangono distinte dalle funzionalità successive ancora da verificare. Il progetto non è dichiarato concluso.
