@@ -7,6 +7,7 @@ import org.progetti.accessdeskapi.exception.error.APIError;
 import org.progetti.accessdeskapi.exception.error.ErrorName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -70,9 +71,9 @@ public class GlobalExceptionHandler {
 
     }
 
-    @ExceptionHandler(JwtException.class)
+    @ExceptionHandler({JwtException.class, UsernameNotFoundException.class})
     public ResponseEntity<APIError> handleJwt(
-            JwtException exception,
+            RuntimeException exception,
             HttpServletRequest request
     ) {
         ErrorName err = ErrorName.TOKEN_ERROR;

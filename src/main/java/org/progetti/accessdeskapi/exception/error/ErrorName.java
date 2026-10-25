@@ -18,6 +18,7 @@ public enum ErrorName {
     private final HttpStatus status;
 
     ErrorName(HttpStatus status) {
+
         this.status = status;
     }
 }

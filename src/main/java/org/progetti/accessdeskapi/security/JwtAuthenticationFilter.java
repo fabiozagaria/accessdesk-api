@@ -9,9 +9,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
@@ -19,6 +22,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtDecoder jwtDecoder;
     private final UserDetailsService userDetailsService;
+    private final HandlerExceptionResolver exceptionResolver;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -28,21 +32,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         String token = auth.substring(7);
-        Jwt jwt = jwtDecoder.decode(token);
-        String username = jwt.getSubject();
-        UserDetails userDetails =
-                userDetailsService.loadUserByUsername(username);
 
-        var authentication =
-                UsernamePasswordAuthenticationToken.authenticated(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+            String username = jwt.getSubject();
+            UserDetails userDetails =
+                    userDetailsService.loadUserByUsername(username);
 
-        var context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
+            var authentication =
+                    UsernamePasswordAuthenticationToken.authenticated(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+
+            var context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(authentication);
+            SecurityContextHolder.setContext(context);
+
+        } catch (JwtException | UsernameNotFoundException e) {
+            SecurityContextHolder.clearContext();
+            exceptionResolver.resolveException(request, response, null, e);
+            return;
+        }
+
 
         filterChain.doFilter(request, response);
 
