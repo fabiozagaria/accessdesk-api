@@ -1,5 +1,7 @@
 # AccessDesk — API per richieste di accesso software
 
+**Versione corrente:** `v0.1.0-alpha.1` (prerelease).
+
 **Ticket:** IT-2026-014  
 **Cliente simulato:** Northstar Services S.r.l.  
 **Sviluppatore:** Fabio Zagaria  
