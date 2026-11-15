@@ -11,7 +11,7 @@
 
 API REST interna: un dipendente crea richieste di accesso a software e consulta le proprie; un manager consulta tutte le richieste e approva o rifiuta quelle ancora in attesa.
 
-Consegna backend locale, senza frontend. L'implementazione include utenti persistiti, registrazione e paginazione come estensioni della consegna originale. JWT è stato aggiunto come approfondimento autonomo; refresh token, Docker e frontend restano fuori dalla consegna corrente.
+Consegna backend locale, senza frontend. L'implementazione include utenti persistiti, registrazione e paginazione come estensioni della consegna originale. JWT, migrazioni Flyway e avvio con Docker sono stati aggiunti come approfondimenti autonomi; refresh token e frontend restano fuori dalla consegna corrente.
 
 ## Documenti della consegna
 
@@ -36,12 +36,14 @@ I documenti originali restano consultabili; il requisito MySQL originale è supe
 - Locking ottimistico con @Version; la gestione di richieste realmente concorrenti non è stata collaudata.
 - Paginazione con Page / Pageable, ordinamento predefinito urgency DESC e createdAt DESC.
 - Open Session in View disabilitato.
+- Schema del database versionato con Flyway; Hibernate in modalità `validate`.
+- Immagine Docker multi-stage e `docker-compose.yml` con PostgreSQL 18.
 
 ## Requisiti e avvio locale
 
-Servono JDK 21 e un server PostgreSQL raggiungibile. Senza un profilo attivo esplicito, `spring.profiles.default=postgres` carica `application-postgres.properties`. Le impostazioni JPA e di sicurezza comuni restano in `application.properties`.
+Il modo più rapido è [Docker](#avvio-con-docker). In alternativa servono JDK 21 e un server PostgreSQL raggiungibile. Senza un profilo attivo esplicito, `spring.profiles.default=postgres` carica `application-postgres.properties`. Le impostazioni JPA e di sicurezza comuni restano in `application.properties`.
 
-Predisporre il database `accessdesk_pg`, con utente `dev` autorizzato a creare e aggiornare le tabelle, e configurare nell'ambiente o nella Run Configuration dell'IDE:
+Predisporre il database `accessdesk_pg`, vuoto, con utente `dev` autorizzato a creare tabelle (le crea Flyway al primo avvio), e configurare nell'ambiente o nella Run Configuration dell'IDE:
 
 | Variabile | Valore |
 | --- | --- |
@@ -50,11 +52,11 @@ Predisporre il database `accessdesk_pg`, con utente `dev` autorizzato a creare e
 
 La connessione predefinita è `jdbc:postgresql://localhost:5432/accessdesk_pg`. `SECRET_KEY` è obbligatoria all'avvio per creare encoder e decoder JWT, anche se si usa HTTP Basic. Non inserire credenziali personali nel repository.
 
-In sviluppo `ddl-auto=update` permette a Hibernate di creare/aggiornare le tabelle in un database già esistente; non crea il database e non trasferisce i dati da MySQL. `open-in-view=false` e log SQL restano invariati. Questo passaggio prevede nuovi account e nuove richieste su PostgreSQL: i dati MySQL restano nel database originale. Non sono introdotte migrazioni versionate Flyway/Liquibase.
+Lo schema è gestito da Flyway (vedi [Migrazioni del database](#migrazioni-del-database-flyway)): Flyway non crea il database e non trasferisce i dati da MySQL. `open-in-view=false` e log SQL restano invariati.
 
 ### Profilo MySQL alternativo
 
-Per usare MySQL impostare `SPRING_PROFILES_ACTIVE=mysql` e `DB_PASSWORD`; la connessione di `application-mysql.properties` è `jdbc:mysql://localhost:3306/accessdesk`, con utente `root`. Predisporre il database `accessdesk` e mantenere anche `SECRET_KEY`. Il driver MySQL resta disponibile nel progetto.
+Per usare MySQL impostare `SPRING_PROFILES_ACTIVE=mysql` e `DB_PASSWORD`; la connessione di `application-mysql.properties` è `jdbc:mysql://localhost:3306/accessdesk`, con utente `root`. Predisporre il database `accessdesk`, vuoto, e mantenere anche `SECRET_KEY`. Il driver MySQL resta disponibile nel progetto e Flyway applica le migrazioni di `db/migration/mysql`, che non sono ancora state eseguite su un server MySQL reale.
 
 `spring.profiles.default` viene usato soltanto in assenza di profili attivi espliciti: un profilo `mysql` già selezionato nell'IDE continua a selezionare MySQL. Rimuovere quella selezione per usare il database predefinito, oppure impostare esplicitamente `postgres`.
 
@@ -75,6 +77,71 @@ Windows:
 ```
 
 Base URL predefinita: http://localhost:8080.
+
+## Avvio con Docker
+
+Serve Docker con Compose v2. `docker-compose.yml` avvia due servizi:
+
+| Servizio | Contenuto |
+| --- | --- |
+| `db` | PostgreSQL 18 con utente `dev` e database `accessdesk_pg`, dati nel volume `pgdata` |
+| `api` | l'applicazione con profilo `postgres`, avviata solo quando il database risponde all'healthcheck |
+
+Creare nella radice del progetto un file `.env`, escluso da git, con le variabili lette da Compose:
+
+```dotenv
+PG_PASSWORD=<password_a_scelta>
+SECRET_KEY=<chiave_base64>
+# Opzionale: porta locale del database, predefinita 5432
+DB_PORT=5432
+```
+
+`SECRET_KEY` si genera per esempio con `openssl rand -base64 32`. Se `PG_PASSWORD` o `SECRET_KEY` mancano, Compose si ferma con un messaggio esplicito.
+
+Avvio, con build dell'immagine:
+
+```bash
+docker compose up -d --build
+```
+
+Log dell'applicazione e arresto:
+
+```bash
+docker compose logs -f api
+```
+
+```bash
+docker compose down
+```
+
+`docker compose down -v` elimina anche il volume `pgdata`, cioè tutti i dati del database.
+
+Al primo avvio Flyway crea le tabelle nel database vuoto. L'API risponde su http://localhost:8080. La porta del database è pubblicata solo su `127.0.0.1`, così si può avviare l'applicazione dall'IDE contro il database del container: basta il servizio `db` (`docker compose up -d db`) e la stessa `PG_PASSWORD` nella Run Configuration. Se la porta 5432 è già occupata, per esempio da un altro PostgreSQL, impostare un `DB_PORT` diverso. Il servizio `api` non ne risente, perché raggiunge il database sulla rete interna (`db:5432`); va adeguato solo l'URL del datasource quando si avvia l'applicazione dall'IDE, per esempio con `SPRING_DATASOURCE_URL`.
+
+L'immagine viene costruita in due fasi: compilazione con il Maven wrapper su JDK 21, quindi esecuzione del solo jar su JRE 21 con un utente non privilegiato. I test non vengono eseguiti durante la build dell'immagine.
+
+## Migrazioni del database (Flyway)
+
+Al primo avvio Flyway applica le migrazioni SQL e registra quelle eseguite nella tabella `flyway_schema_history`. Hibernate usa `ddl-auto=validate`: non modifica lo schema, verifica soltanto che entità e tabelle corrispondano e blocca l'avvio in caso di differenze.
+
+Le migrazioni sono separate per database, perché la sintassi di PostgreSQL e MySQL differisce (identity, tipi temporali). La cartella viene scelta in base al driver tramite `spring.flyway.locations=classpath:db/migration/{vendor}`:
+
+| Database | Cartella |
+| --- | --- |
+| PostgreSQL | `src/main/resources/db/migration/postgresql` |
+| MySQL | `src/main/resources/db/migration/mysql` |
+
+`V1__create_users_and_requests.sql` crea `users` e `requests` con vincolo di unicità sullo username, chiave esterna `user_id`, indice su `user_id` e vincoli `CHECK` sui valori degli enum.
+
+Regole per modificare lo schema:
+
+- Ogni modifica è una nuova migrazione con versione successiva (`V2__descrizione.sql`), da aggiungere in entrambe le cartelle finché il profilo MySQL resta supportato.
+- Una migrazione già applicata non va modificata: Flyway ne verifica il checksum e rifiuta l'avvio se cambia.
+- Aggiungere un valore a un enum (`Role`, `StatusRequest`, `Urgency`) richiede una migrazione che aggiorni il relativo vincolo `CHECK`.
+
+### Database creati prima di Flyway
+
+Un database le cui tabelle sono state create dalla vecchia configurazione `ddl-auto=update` non ha la tabella `flyway_schema_history`, e Flyway rifiuta di partire su uno schema non vuoto. In sviluppo la soluzione più pulita è ricreare il database vuoto. Per conservare i dati, avviare una sola volta l'applicazione con `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true`: Flyway considera lo schema esistente già alla versione 1, e la validazione di Hibernate segnala eventuali differenze.
 
 ## Autenticazione e account di prova
 
@@ -220,13 +287,19 @@ bash mvnw test
 bash mvnw clean package
 ```
 
-Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datasource disponibile e configurato. Tentativo di `bash mvnw test` del 25 ottobre 2026: bloccato prima della compilazione dalla risoluzione DNS di Maven Central; Maven segnala inoltre dichiarazioni duplicate preesistenti di `maven-compiler-plugin` nel POM. Nessun test eseguito. L'ambiente di revisione dispone di JDK 17 anziché del JDK 21 richiesto e non dispone di PostgreSQL: build e collaudo applicativo restano da eseguire in un ambiente adeguato.
+Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datasource disponibile e configurato. Tentativo di `bash mvnw test` del 25 ottobre 2026: bloccato prima della compilazione dalla risoluzione DNS di Maven Central; Maven segnalava inoltre dichiarazioni duplicate preesistenti di `maven-compiler-plugin` nel POM, unificate il 15 novembre 2026. Nessun test eseguito. L'ambiente di revisione dispone di JDK 17 anziché del JDK 21 richiesto e non dispone di PostgreSQL: build e collaudo applicativo restano da eseguire in un ambiente adeguato.
 
 ## Passaggio a PostgreSQL — 25 ottobre 2026
 
 Revisione di tutti i sorgenti Java: repository basate su Spring Data JPA, nessuna query SQL nativa o `columnDefinition` specifica MySQL. Mapping con IDENTITY, enum stringa, relazione users/requests, Instant e @Version mantenuti; nessun cambiamento Java necessario dalla revisione statica. Entrambi i driver JDBC erano già presenti.
 
 Dopo il cambio di profilo verificare sul proprio ambiente: avvio con PostgreSQL, registrazione e username duplicato (409), login, creazione/lettura delle richieste, permessi EMPLOYEE/MANAGER, decisione e seconda decisione (409), paginazione/ordinamento e persistenza dopo riavvio. Questi controlli non sono dichiarati superati dalla sola revisione statica. In particolare la sensibilità alle maiuscole dello username può differire dalla precedente collation MySQL: il codice non normalizza gli username.
+
+## Flyway e Docker — 15 novembre 2026
+
+Aggiunti Flyway con una migrazione V1 per PostgreSQL e una per MySQL, `ddl-auto` passato da `update` a `validate`, Dockerfile multi-stage e `docker-compose.yml`. Le tre dichiarazioni di `maven-compiler-plugin` nel POM sono state unificate in una sola, con la configurazione che risultava effettiva (Lombok, MapStruct, lombok-mapstruct-binding): il Maven wrapper rifiutava i duplicati e la build dell'immagine non poteva partire.
+
+Verificato con lo stack Docker su un database vuoto: build dell'immagine riuscita, migrazione V1 applicata da Flyway, validazione di Hibernate superata, avvio dell'applicazione, `POST /auth/register` con 201 e `POST /auth/login` con 200 e token. Non verificati: migrazione MySQL, test automatici, gli altri endpoint.
 
 ## Allineamento della documentazione — 25 ottobre 2026
 
