@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?imposta PG_PASSWORD nel file .env}
+      POSTGRES_DB: accessdesk_pg
+    ports:
+      # Solo loopback: permette di avviare l'app dall'IDE contro questo database
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      # Da PostgreSQL 18 il volume va montato su /var/lib/postgresql
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d accessdesk_pg"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/accessdesk_pg
+      PG_PASSWORD: ${PG_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY:?imposta SECRET_KEY (Base64, almeno 32 byte) nel file .env}
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
