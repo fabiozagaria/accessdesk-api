@@ -97,7 +97,7 @@ Avvio locale senza database esterno:
 $env:SECRET_KEY = "<chiave_base64>"; $env:SPRING_PROFILES_ACTIVE = "demo"; .\mvnw.cmd spring-boot:run
 ```
 
-`render.yaml` descrive il deploy su Render (immagine dal `Dockerfile`, `SECRET_KEY` generata da Render). I dati vivono solo in memoria: si perdono a ogni riavvio e, sul piano gratuito, il primo avvio dopo una pausa richiede circa un minuto. Link alla demo online: _da aggiungere dopo il deploy_.
+`render.yaml` descrive il deploy su Render (immagine dal `Dockerfile`, `SECRET_KEY` generata da Render). I dati vivono solo in memoria: si perdono a ogni riavvio e, sul piano gratuito, il primo avvio dopo una pausa richiede circa un minuto. **Demo online:** https://access-desk-api.onrender.com/swagger-ui.html (il primo caricamento dopo una pausa può richiedere circa un minuto).
 
 ## Avvio con Docker
 
