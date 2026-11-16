@@ -2,6 +2,7 @@ package org.progetti.accessdeskapi.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,10 +22,17 @@ public class JwtService {
     public String generateAccessToken(Authentication authentication) {
 
         Instant now = Instant.now();
+        // Solo i ruoli (ROLE_*): i permessi restano lato server e vengono ricaricati dal DB nel filtro
+        List<String> roles = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .toList();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(authentication.getName())
                 .issuedAt(now)
+                .claim("roles", roles)
                 .expiresAt(now.plusSeconds(900))
                 .build();
         JwsHeader header = JwsHeader
