@@ -1,0 +1,12 @@
+# Demo pubblica su Render: database H2 in memoria, dati di esempio a ogni avvio.
+services:
+  - type: web
+    name: access-desk-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /v3/api-docs
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: demo
+      - key: SECRET_KEY
+        generateValue: true

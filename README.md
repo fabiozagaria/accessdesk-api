@@ -78,6 +78,27 @@ Windows:
 
 Base URL predefinita: http://localhost:8080.
 
+### Documentazione API (Swagger UI)
+
+Con l'applicazione avviata, la documentazione interattiva è su http://localhost:8080/swagger-ui.html e la specifica OpenAPI su http://localhost:8080/v3/api-docs. Gli endpoint sono raggruppati in `auth` (pubblici) e `requests` (protetti): per provarli fare login su `/auth/login` e incollare il token in **Authorize**. Per nuove aree basta aggiungere un bean `GroupedOpenApi` in `OpenApiConfig`. In produzione disattivare la documentazione con `SPRINGDOC_ENABLED=false`.
+
+### Demo pubblica (profilo `demo`)
+
+Il profilo `demo` usa un database H2 in memoria (con le stesse migrazioni PostgreSQL) e crea all'avvio due utenti di prova e tre richieste di esempio, così Swagger si prova subito senza registrarsi:
+
+| Utente | Ruolo | Password |
+| --- | --- | --- |
+| `demo.employee` | EMPLOYEE | `DemoPass2026` (modificabile con `DEMO_PASSWORD`) |
+| `demo.manager` | MANAGER | `DemoPass2026` |
+
+Avvio locale senza database esterno:
+
+```powershell
+$env:SECRET_KEY = "<chiave_base64>"; $env:SPRING_PROFILES_ACTIVE = "demo"; .\mvnw.cmd spring-boot:run
+```
+
+`render.yaml` descrive il deploy su Render (immagine dal `Dockerfile`, `SECRET_KEY` generata da Render). I dati vivono solo in memoria: si perdono a ogni riavvio e, sul piano gratuito, il primo avvio dopo una pausa richiede circa un minuto. Link alla demo online: _da aggiungere dopo il deploy_.
+
 ## Avvio con Docker
 
 Serve Docker con Compose v2. `docker-compose.yml` avvia due servizi:
