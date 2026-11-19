@@ -1,4 +1,6 @@
 # Demo pubblica su Render: database H2 in memoria, dati di esempio a ogni avvio.
+# Per una demo persistente su Neon: SPRING_PROFILES_ACTIVE=demo,neon più DB_URL, DB_USERNAME e DB_PASSWORD
+# impostate a mano su Render (vedi README, "Demo persistente su Neon").
 services:
   - type: web
     name: access-desk-api

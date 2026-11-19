@@ -26,7 +26,7 @@ I documenti originali restano consultabili; il requisito MySQL originale è supe
 
 ## Stack e scelte tecniche
 
-- Java 21, Spring Boot, Spring Web, Spring Data JPA / Hibernate, PostgreSQL predefinito e MySQL alternativo.
+- Java 21, Spring Boot, Spring Web, Spring Data JPA / Hibernate, PostgreSQL (unico database dal 19 novembre 2026; H2 in modalità PostgreSQL per la demo in memoria).
 - Spring Security: JWT Bearer HS256 con access token di 900 secondi (15 minuti), session policy stateless, BCrypt e autorizzazioni con method security. HTTP Basic resta abilitato come alternativa.
 - Filtro personalizzato `JwtAuthenticationFilter` (`OncePerRequestFilter`) prima di `UsernamePasswordAuthenticationFilter`: valida il token, ricarica utente e authorities dal database e popola il `SecurityContext`.
 - Errori JWT e utente non trovato nel filtro delegati a `HandlerExceptionResolver`, quindi al `GlobalExceptionHandler`: risposta `APIError` con stato 401. Non tutti gli errori Spring Security usano necessariamente questo formato.
@@ -52,15 +52,11 @@ Predisporre il database `accessdesk_pg`, vuoto, con utente `dev` autorizzato a c
 
 La connessione predefinita è `jdbc:postgresql://localhost:5432/accessdesk_pg`. `SECRET_KEY` è obbligatoria all'avvio per creare encoder e decoder JWT, anche se si usa HTTP Basic. Non inserire credenziali personali nel repository.
 
-Lo schema è gestito da Flyway (vedi [Migrazioni del database](#migrazioni-del-database-flyway)): Flyway non crea il database e non trasferisce i dati da MySQL. `open-in-view=false` e log SQL restano invariati.
+Lo schema è gestito da Flyway (vedi [Migrazioni del database](#migrazioni-del-database-flyway)): Flyway non crea il database. `open-in-view=false` e log SQL restano invariati.
 
-### Profilo MySQL alternativo
+Il profilo MySQL alternativo è stato rimosso il 19 novembre 2026 insieme al driver, a `flyway-mysql` e alle migrazioni di `db/migration/mysql`, che non erano mai state eseguite su un server MySQL reale. Un profilo `mysql` rimasto selezionato nell'IDE ora non trova configurazione: rimuoverlo oppure impostare esplicitamente `postgres`.
 
-Per usare MySQL impostare `SPRING_PROFILES_ACTIVE=mysql` e `DB_PASSWORD`; la connessione di `application-mysql.properties` è `jdbc:mysql://localhost:3306/accessdesk`, con utente `root`. Predisporre il database `accessdesk`, vuoto, e mantenere anche `SECRET_KEY`. Il driver MySQL resta disponibile nel progetto e Flyway applica le migrazioni di `db/migration/mysql`, che non sono ancora state eseguite su un server MySQL reale.
-
-`spring.profiles.default` viene usato soltanto in assenza di profili attivi espliciti: un profilo `mysql` già selezionato nell'IDE continua a selezionare MySQL. Rimuovere quella selezione per usare il database predefinito, oppure impostare esplicitamente `postgres`.
-
-Le variabili `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD` sovrascrivono le proprietà dei profili. Controllare ed eliminare eventuali vecchi override MySQL dalla Run Configuration prima di passare a PostgreSQL.
+Le variabili `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD` sovrascrivono le proprietà dei profili. Controllare ed eliminare eventuali vecchi override MySQL dalla Run Configuration.
 
 ### Avvio
 
@@ -97,7 +93,17 @@ Avvio locale senza database esterno:
 $env:SECRET_KEY = "<chiave_base64>"; $env:SPRING_PROFILES_ACTIVE = "demo"; .\mvnw.cmd spring-boot:run
 ```
 
-`render.yaml` descrive il deploy su Render (immagine dal `Dockerfile`, `SECRET_KEY` generata da Render). I dati vivono solo in memoria: si perdono a ogni riavvio e, sul piano gratuito, il primo avvio dopo una pausa richiede circa un minuto. **Demo online:** https://access-desk-api.onrender.com/swagger-ui.html (il primo caricamento dopo una pausa può richiedere circa un minuto).
+`render.yaml` descrive il deploy su Render (immagine dal `Dockerfile`, `SECRET_KEY` generata da Render). Con il solo profilo `demo` i dati vivono in memoria: si perdono a ogni riavvio e, sul piano gratuito, il primo avvio dopo una pausa richiede circa un minuto. **Demo online:** https://access-desk-api.onrender.com/swagger-ui.html (il primo caricamento dopo una pausa può richiedere circa un minuto).
+
+### Demo persistente su Neon (profilo `demo,neon`)
+
+Per conservare dati e richieste tra un riavvio e l'altro la demo può usare PostgreSQL su [Neon](https://neon.com) (piano Free: 100 ore di calcolo al mese e 1 GB per progetto, secondo la documentazione di novembre 2026; gratuito ma non illimitato, superato lo spazio le scritture falliscono). Passi da fare a mano:
+
+1. Creare un progetto Neon (regione europea) e copiare da **Connect** la connessione **diretta**: l'host non deve contenere `-pooler`, perché Neon sconsiglia PgBouncer per le migrazioni Flyway.
+2. Su Render impostare `DB_URL=jdbc:postgresql://HOST/neondb` (senza credenziali né parametri), `DB_USERNAME`, `DB_PASSWORD` e `SPRING_PROFILES_ACTIVE=demo,neon`. Conviene impostare anche una `DEMO_PASSWORD` propria.
+3. Verificare Swagger, login di `demo.employee` e `demo.manager`, una richiesta creata e ritrovata dopo un riavvio.
+
+`application-neon.properties` impone TLS con verifica completa del certificato (`sslmode=verify-full` con il truststore di Java, `channelBinding=require`) e usa al massimo 3 connessioni senza tenerne aperte a riposo, così Neon può spegnersi e non consuma ore di calcolo. Al primo avvio Flyway crea le tabelle e `DemoDataSeeder` i dati di esempio; agli avvii successivi il seeder aggiorna solo la password degli utenti demo e non duplica nulla. Per tornare alla demo in memoria basta `SPRING_PROFILES_ACTIVE=demo`.
 
 ## Avvio con Docker
 
@@ -145,18 +151,13 @@ L'immagine viene costruita in due fasi: compilazione con il Maven wrapper su JDK
 
 Al primo avvio Flyway applica le migrazioni SQL e registra quelle eseguite nella tabella `flyway_schema_history`. Hibernate usa `ddl-auto=validate`: non modifica lo schema, verifica soltanto che entità e tabelle corrispondano e blocca l'avvio in caso di differenze.
 
-Le migrazioni sono separate per database, perché la sintassi di PostgreSQL e MySQL differisce (identity, tipi temporali). La cartella viene scelta in base al driver tramite `spring.flyway.locations=classpath:db/migration/{vendor}`:
-
-| Database | Cartella |
-| --- | --- |
-| PostgreSQL | `src/main/resources/db/migration/postgresql` |
-| MySQL | `src/main/resources/db/migration/mysql` |
+Le migrazioni sono in `src/main/resources/db/migration/postgresql` (`spring.flyway.locations`), usate sia da PostgreSQL sia da H2 in modalità PostgreSQL nel profilo `demo`.
 
 `V1__create_users_and_requests.sql` crea `users` e `requests` con vincolo di unicità sullo username, chiave esterna `user_id`, indice su `user_id` e vincoli `CHECK` sui valori degli enum.
 
 Regole per modificare lo schema:
 
-- Ogni modifica è una nuova migrazione con versione successiva (`V2__descrizione.sql`), da aggiungere in entrambe le cartelle finché il profilo MySQL resta supportato.
+- Ogni modifica è una nuova migrazione con versione successiva (`V2__descrizione.sql`), compatibile anche con H2 in modalità PostgreSQL.
 - Una migrazione già applicata non va modificata: Flyway ne verifica il checksum e rifiuta l'avvio se cambia.
 - Aggiungere un valore a un enum (`Role`, `StatusRequest`, `Urgency`) richiede una migrazione che aggiorni il relativo vincolo `CHECK`.
 
@@ -309,6 +310,12 @@ bash mvnw clean package
 ```
 
 Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datasource disponibile e configurato. Tentativo di `bash mvnw test` del 25 ottobre 2026: bloccato prima della compilazione dalla risoluzione DNS di Maven Central; Maven segnalava inoltre dichiarazioni duplicate preesistenti di `maven-compiler-plugin` nel POM, unificate il 15 novembre 2026. Nessun test eseguito. L'ambiente di revisione dispone di JDK 17 anziché del JDK 21 richiesto e non dispone di PostgreSQL: build e collaudo applicativo restano da eseguire in un ambiente adeguato.
+
+## Solo PostgreSQL e demo su Neon — 19 novembre 2026
+
+Rimossi profilo, driver, dipendenza Flyway e migrazioni MySQL; aggiunto il profilo `neon` per una demo persistente su Neon. `DemoDataSeeder` ora è idempotente: con un database che sopravvive ai riavvii, il vecchio seeder falliva al secondo avvio per il vincolo `UNIQUE` sullo username. Il comportamento sulle maiuscole dello username resta quello di PostgreSQL (distingue `Mario` da `mario`), invariato rispetto al profilo predefinito precedente.
+
+Verificato: `mvn test` con JDK 21 (2 test: `contextLoads` sul profilo `postgres` con PostgreSQL 17 in Docker e il nuovo `DemoDataSeederTests`, che fallisce senza la correzione del seeder); JAR avviato due volte con `demo,neon` sullo stesso PostgreSQL 17 locale (TLS spento solo per la prova): migrazione applicata una volta, login di `demo.employee` con 200 a entrambi gli avvii, sempre 2 utenti e 3 richieste; con TLS imposto l'avvio contro un server senza SSL viene rifiutato. Non verificati: connessione a un database Neon reale e deploy su Render con `demo,neon`.
 
 ## Passaggio a PostgreSQL — 25 ottobre 2026
 
