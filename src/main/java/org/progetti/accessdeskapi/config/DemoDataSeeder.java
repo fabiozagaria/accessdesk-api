@@ -17,7 +17,11 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-/** Crea utenti e richieste di esempio, solo con il profilo "demo". */
+/**
+ * Crea utenti e richieste di esempio, solo con il profilo "demo".
+ * Con H2 in memoria parte sempre da un database vuoto; con Neon (profilo "neon") i dati restano:
+ * se gli utenti demo esistono già, aggiorna solo la password e non tocca le richieste.
+ */
 @Component
 @Profile("demo")
 @RequiredArgsConstructor
@@ -32,6 +36,12 @@ public class DemoDataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        var existing = userRepository.findByUsername("demo.employee");
+        if (existing.isPresent()) {
+            refreshPassword(existing.get());
+            userRepository.findByUsername("demo.manager").ifPresent(this::refreshPassword);
+            return;
+        }
         User employee = userRepository.save(newUser("demo.employee", Role.EMPLOYEE));
         userRepository.save(newUser("demo.manager", Role.MANAGER));
 
@@ -44,6 +54,12 @@ public class DemoDataSeeder implements CommandLineRunner {
         requestRepository.save(newRequest(employee, "DBeaver",
                 "Consultare le tabelle PostgreSQL in sola lettura.",
                 Urgency.STANDARD, StatusRequest.APPROVED, 7, 5));
+    }
+
+    /** DEMO_PASSWORD può cambiare tra un deploy e l'altro. */
+    private void refreshPassword(User user) {
+        user.setPasswordHash(passwordEncoder.encode(demoPassword));
+        userRepository.save(user);
     }
 
     private User newUser(String username, Role role) {

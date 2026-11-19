@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Scopo
-API REST AccessDesk (richieste di accesso software, autenticazione JWT, PostgreSQL con alternativa MySQL).
+API REST AccessDesk (richieste di accesso software, autenticazione JWT, PostgreSQL; demo su H2 in memoria o su Neon col profilo `demo,neon`).
 
 ## Fonti di verità
 Il codice e la configurazione del repository sono la verità tecnica. `README.md` presenta lo stato pubblico e lo stato delle verifiche; non dichiarare verificato ciò che non lo è.
