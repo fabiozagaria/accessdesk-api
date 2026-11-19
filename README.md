@@ -105,6 +105,8 @@ Per conservare dati e richieste tra un riavvio e l'altro la demo può usare Post
 
 `application-neon.properties` impone TLS con verifica completa del certificato (`sslmode=verify-full` con il truststore di Java, `channelBinding=require`) e usa al massimo 3 connessioni senza tenerne aperte a riposo, così Neon può spegnersi e non consuma ore di calcolo. Al primo avvio Flyway crea le tabelle e `DemoDataSeeder` i dati di esempio; agli avvii successivi il seeder aggiorna solo la password degli utenti demo e non duplica nulla. Per tornare alla demo in memoria basta `SPRING_PROFILES_ACTIVE=demo`.
 
+Progetto Neon collegato il 19 novembre 2026: `accessdesk` (`red-shadow-44802227`, regione `aws-eu-central-1`), branch `main`, database `neondb` su PostgreSQL 18. `neon.ts` descrive la configurazione Neon come codice e `package.json` contiene solo le librerie lette dalla CLI `neon` (`@neon/config`, `@neon/env`): non entrano nella build Maven né nell'immagine Docker. Dalla radice del repository, dopo `npm install` e `neon login`, `neon deploy` scrive in `.env.local` (escluso da Git) `DATABASE_URL` e `DATABASE_URL_UNPOOLED`: per Render si usa la diretta, convertita in `DB_URL=jdbc:postgresql://HOST/neondb`, `DB_USERNAME` e `DB_PASSWORD`. Da un PC con browser `psql -h pg.neon.tech` permette di collegarsi senza password per controllare le tabelle.
+
 ## Avvio con Docker
 
 Serve Docker con Compose v2. `docker-compose.yml` avvia due servizi:
@@ -314,6 +316,8 @@ Su Windows usare .\mvnw.cmd. I test che caricano il contesto richiedono un datas
 ## Solo PostgreSQL e demo su Neon — 19 novembre 2026
 
 Rimossi profilo, driver, dipendenza Flyway e migrazioni MySQL; aggiunto il profilo `neon` per una demo persistente su Neon. `DemoDataSeeder` ora è idempotente: con un database che sopravvive ai riavvii, il vecchio seeder falliva al secondo avvio per il vincolo `UNIQUE` sullo username. Il comportamento sulle maiuscole dello username resta quello di PostgreSQL (distingue `Mario` da `mario`), invariato rispetto al profilo predefinito precedente.
+
+Verifiche del 19 novembre 2026 (sera), con il progetto Neon collegato: database Neon raggiungibile tramite l'endpoint SQL su HTTPS (PostgreSQL 18.7, ancora senza tabelle); `mvn package` con 2 test passati, `contextLoads` su PostgreSQL 18; JAR avviato due volte con `demo,neon` su PostgreSQL 18.7 locale (TLS spento solo per la prova): Flyway applica V1 e poi trova lo schema aggiornato, login di `demo.employee` con 200 a entrambi gli avvii, sempre 2 utenti e 3 richieste. Non verificati: connessione JDBC al database Neon reale e deploy su Render.
 
 Verificato: `mvn test` con JDK 21 (2 test: `contextLoads` sul profilo `postgres` con PostgreSQL 17 in Docker e il nuovo `DemoDataSeederTests`, che fallisce senza la correzione del seeder); JAR avviato due volte con `demo,neon` sullo stesso PostgreSQL 17 locale (TLS spento solo per la prova): migrazione applicata una volta, login di `demo.employee` con 200 a entrambi gli avvii, sempre 2 utenti e 3 richieste; con TLS imposto l'avvio contro un server senza SSL viene rifiutato. Non verificati: connessione a un database Neon reale e deploy su Render con `demo,neon`.
 
